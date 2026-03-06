@@ -191,7 +191,7 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const JOB_TYPES=['Mod Upgrade','DNX Upgrade','General Construction'];
 const LOCATIONS=['Baton Rouge, LA','Phoenix, AZ'];
-let currentUser=null,jobFilter='all',jobLocFilter='all';
+let currentUser=null;
 let activeJobClient='all',activeWOClient='all';
 
 function switchAuthTab(tab){
@@ -571,11 +571,7 @@ async function renderJobs(){
   +'</div>';
 
   const clientFiltered=activeJobClient==='all'?all:all.filter(j=>j.client_id===activeJobClient);
-  const filtered=clientFiltered.filter(j=>{
-    const sOk=jobFilter==='all'||j.status===jobFilter;
-    const lOk=jobLocFilter==='all'||j.location===jobLocFilter;
-    return sOk&&lOk;
-  });
+  const filtered=clientFiltered;
 
   const created=clientFiltered.filter(j=>j.status==='created').length;
   const inProg=clientFiltered.filter(j=>j.status==='in_progress').length;
@@ -680,16 +676,6 @@ async function renderJobs(){
     +'</div>'
     +tabsHTML
     +summaryHTML
-    +'<div class="filters">'
-      +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">STATUS:</span>'
-      +['all','created','in_progress','complete'].map(f=>'<div class="filter-chip '+(jobFilter===f?'active':'')+'" onclick="jobFilter=\''+f+'\';renderJobs()">'+f.replace('_',' ').toUpperCase()+'</div>').join('')
-    +'</div>'
-    +'<div class="filters">'
-      +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">LOCATION:</span>'
-      +'<div class="filter-chip '+(jobLocFilter==='all'?'active':'')+'" onclick="jobLocFilter=\'all\';renderJobs()">ALL</div>'
-      +LOCATIONS.map(l=>'<div class="filter-chip '+(jobLocFilter===l?'active':'')+'" onclick="jobLocFilter=\''+l+'\';renderJobs()">'+l+'</div>').join('')
-    +'</div>'
-    +(filtered.length===0?'<div class="empty"><div class="empty-icon">&#9874;</div><div class="empty-text">No jobs found</div><button class="btn btn-primary" onclick="showCreateJobModal()">Create Job</button></div>':'')
     +cards
   );
 }
