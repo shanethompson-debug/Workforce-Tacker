@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FieldOps</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;--accent:#f0a500;--text:#e8e8e8;--text2:#888;--text3:#555;--success:#22c55e;--danger:#ef4444;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 50%,#1a1200 0%,#0f0f0f 60%);}
+.auth-box{width:380px;padding:48px 40px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);}
+.auth-logo{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent);margin-bottom:8px;}
+.auth-sub{color:var(--text2);font-size:13px;margin-bottom:36px;}
+.auth-tabs{display:flex;margin-bottom:28px;border-bottom:1px solid var(--border);}
+.auth-tab{padding:8px 20px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:var(--mono);}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+#app{display:none;min-height:100vh;}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+.logo-text{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent);}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;}
+.nav-section{padding:8px 16px 4px;font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border-left:2px solid transparent;}
+.nav-item:hover{color:var(--text);background:var(--surface2);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(240,165,0,.06);}
+.nav-icon{font-size:15px;width:18px;text-align:center;}
+.sidebar-footer{padding:16px;border-top:1px solid var(--border);}
+.user-badge{font-size:12px;color:var(--text2);font-family:var(--mono);}
+.user-badge span{color:var(--text);display:block;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.main{margin-left:220px;padding:32px;min-height:100vh;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.page-title{font-family:var(--mono);font-size:20px;font-weight:600;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:3px;}
+.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.filter-chip{padding:6px 14px;font-size:12px;cursor:pointer;font-family:var(--mono);background:var(--surface2);border:1px solid var(--border);color:var(--text2);transition:all .15s;}
+.filter-chip:hover{border-color:var(--accent);color:var(--accent);}
+.filter-chip.active{background:rgba(240,165,0,.12);border-color:var(--accent);color:var(--accent);}
+.card{background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:12px;}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.card-title{font-size:15px;font-weight:500;}
+.card-title.clickable:hover{color:var(--accent);cursor:pointer;}
+.card-meta{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;}
+.meta-item{font-size:12px;color:var(--text2);font-family:var(--mono);}
+.meta-item span{color:var(--text3);}
+.badge{display:inline-block;padding:2px 10px;font-size:11px;font-family:var(--mono);font-weight:500;letter-spacing:.5px;}
+.badge-open{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}
+.badge-in_progress{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.3);}
+.badge-complete{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);}
+.badge-br{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.3);}
+.badge-phx{background:rgba(249,115,22,.1);color:#fb923c;border:1px solid rgba(249,115,22,.3);}
+.btn{padding:9px 18px;font-size:13px;cursor:pointer;font-family:var(--mono);border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#000;font-weight:600;}
+.btn-primary:hover{background:#ffb820;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid transparent;padding:6px 10px;}
+.btn-ghost:hover{color:var(--text);border-color:var(--border);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.form-group{margin-bottom:16px;}
+label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;}
+input,select,textarea{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:80px;}
+select option{background:var(--surface2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);width:100%;max-width:580px;max-height:90vh;overflow-y:auto;}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:var(--mono);font-size:15px;font-weight:600;}
+.modal-body{padding:24px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text2);cursor:pointer;font-size:13px;margin-bottom:20px;font-family:var(--mono);}
+.back-btn:hover{color:var(--accent);}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{padding:10px 18px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;font-family:var(--mono);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.section-title{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);padding:16px 20px;}
+.stat-value{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--accent);}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px;}
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{text-align:left;padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--surface2);}
+.task-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.task-item:last-child{border-bottom:none;}
+.task-check{width:16px;height:16px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.task-check.done{background:var(--success);border-color:var(--success);}
+.task-text{flex:1;font-size:13px;}
+.task-text.done{text-decoration:line-through;color:var(--text3);}
+.inline-form{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.inline-form input,.inline-form select{flex:1;min-width:120px;}
+.contractor-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px;}
+.cr-name{flex:1;font-size:13px;font-weight:500;}
+.cr-amount{font-family:var(--mono);color:var(--accent);font-size:14px;}
+.empty{text-align:center;padding:60px 20px;color:var(--text3);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-text{font-size:14px;margin-bottom:16px;}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 18px;font-size:13px;font-family:var(--mono);border-left:3px solid var(--accent);background:var(--surface);border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);animation:slideIn .2s ease;min-width:260px;}
+.toast.error{border-left-color:var(--danger);}
+.toast.success{border-left-color:var(--success);}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.loading{text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:13px;}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.money-pos{color:#4ade80;font-family:var(--mono);}
+.money-neu{color:var(--text2);font-family:var(--mono);}
+.money-neg{color:#f87171;font-family:var(--mono);}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s;}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;padding:16px;padding-top:56px;}
+  .form-row{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .mobile-menu-btn{display:flex !important;}
+}
+.mobile-menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);padding:8px 10px;cursor:pointer;font-size:18px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}
+.sidebar-overlay.open{display:block;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);}
+</style>
+</head>
+<body>
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">⚡ FIELDOPS</div>
+    <div class="auth-sub">Construction Operations Platform</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Create Account</div>
+    </div>
+    <div id="login-form">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@company.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')signIn()"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="signIn()">Sign In →</button>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="John Smith"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="signup-email" placeholder="you@company.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 6 characters"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="signUp()">Create Account →</button>
+    </div>
+    <div id="auth-msg" style="margin-top:14px;font-size:12px;color:var(--text2);font-family:var(--mono)"></div>
+  </div>
+</div>
+<div id="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">⚡ FIELDOPS</div>
+      <div class="logo-sub">Operations Platform</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item" data-page="dashboard" onclick="navigate('dashboard')"><span class="nav-icon">▦</span> Dashboard</div>
+      <div class="nav-section">Work</div>
+      <div class="nav-item" data-page="jobs" onclick="navigate('jobs')"><span class="nav-icon">⚒</span> Jobs</div>
+      <div class="nav-item" data-page="workorders" onclick="navigate('workorders')"><span class="nav-icon">🗂</span> Work Orders</div>
+      <div class="nav-section">Setup</div>
+      <div class="nav-item" data-page="clients" onclick="navigate('clients')"><span class="nav-icon">🏢</span> Clients</div>
+      <div class="nav-item" data-page="people" onclick="navigate('people')"><span class="nav-icon">👤</span> Contractors</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-badge"><span id="user-name-display">—</span>Signed in</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="signOut()">Sign Out</button>
+    </div>
+  </nav>
+  <main class="main" id="main-content"></main>
+</div>
+<div class="toast-container" id="toasts"></div>
+<div id="modal-container"></div>
+<script>
+const SUPABASE_URL='https://gydnphrizizerggxtbng.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZG5waHJpeml6ZXJnZ3h0Ym5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NzUzMTEsImV4cCI6MjA4ODA1MTMxMX0.Tb5HjO2luvJQTBOSKRJWabIz8H0fMNRPyAU9Gun0dC4';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const JOB_TYPES=['Mod Upgrade','DNX Upgrade','General Construction'];
+const LOCATIONS=['Baton Rouge, LA','Phoenix, AZ'];
+let currentUser=null,jobFilter='all',jobLocFilter='all';
+
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('login-form').style.display=tab==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=tab==='signup'?'block':'none';
+}
+async function signIn(){
+  const email=document.getElementById('login-email').value,pass=document.getElementById('login-password').value;
+  setAuthMsg('Signing in...');
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error)return setAuthMsg('Error: '+error.message);
+  onLogin(data.user);
+}
+async function signUp(){
+  const name=document.getElementById('signup-name').value,email=document.getElementById('signup-email').value,pass=document.getElementById('signup-password').value;
+  if(!name||!email||!pass)return setAuthMsg('All fields required');
+  setAuthMsg('Creating account...');
+  const {error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error)return setAuthMsg('Error: '+error.message);
+  setAuthMsg('Check your email to confirm, then sign in.');
+}
+function setAuthMsg(m){document.getElementById('auth-msg').textContent=m;}
+async function signOut(){await sb.auth.signOut();location.reload();}
+function onLogin(user){
+  currentUser=user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-name-display').textContent=user.user_metadata?.full_name||user.email;
+  navigate('dashboard');
+}
+function navigate(page,ctx){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+  closeSidebar();
+  const map={dashboard:renderDashboard,jobs:renderJobs,workorders:renderWorkOrders,clients:renderClients,people:renderPeople,'job-detail':()=>renderJobDetail(ctx),'wo-detail':()=>renderWODetail(ctx)};
+  (map[page]||renderDashboard)();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('open');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');}
+function setMain(h){document.getElementById('main-content').innerHTML=h;}
+function fmtDate(d){if(!d)return'—';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fmtMoney(n){if(n==null||n==='')return'—';return'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function statusBadge(s){return`<span class="badge badge-${s}">${(s||'').replace('_',' ').toUpperCase()}</span>`;}
+function locBadge(l){const cls=l&&l.includes('Phoenix')?'badge-phx':'badge-br';return`<span class="badge ${cls}">📍 ${l||'—'}</span>`;}
+function toast(msg,type='success'){const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),3000);}
+function showModal(title,body,footer){document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" ><div class="modal"><div class="modal-header"><div class="modal-title">${title}</div><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div><div class="modal-body">${body}</div><div class="modal-footer">${footer}</div></div></div>`;}
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+
+// Track per-client month offset (0 = current month)
+const clientMonthOffsets={};
+function getClientMonthOffset(clientId){return clientMonthOffsets[clientId]||0;}
+function setClientMonthOffset(clientId,offset){
+  const now=new Date();
+  const maxOffset=2;
+  const minOffset=-(now.getMonth()); // can't go before Jan of current year
+  offset=Math.max(minOffset,Math.min(maxOffset,offset));
+  clientMonthOffsets[clientId]=offset;
+  renderDashboard();
+}
+
+async function renderDashboard(){
+  setMain('<div class="loading"><span class="spinner"></span>Loading dashboard...</div>');
+
+  const [{data:clients},{data:jobs},{data:wos},{data:woContractors}]=await Promise.all([
+    sb.from('clients').select('*').order('name'),
+    sb.from('jobs').select('*,clients(name)').not('due_date','is',null),
+    sb.from('work_orders').select('*,jobs(due_date,client_id,job_type)'),
+    sb.from('wo_contractors').select('*,people(company_name)'),
+  ]);
+
+  // Week helpers — Saturday to Friday
+  function getWeekStart(d){
+    const dt=new Date(d);
+    const day=dt.getDay();
+    const diff=dt.getDate()-(day===6?0:day+1);
+    dt.setDate(diff);dt.setHours(0,0,0,0);
+    return dt;
+  }
+  function getWeeksInMonth(monthStart,monthEnd){
+    const weeks=[];
+    const now=new Date();
+    let ws=getWeekStart(new Date(monthStart));
+    while(ws<=monthEnd){
+      const we=new Date(ws);we.setDate(we.getDate()+6);
+      const nowWS=getWeekStart(now);
+      const isCurrent=ws.getTime()===nowWS.getTime();
+      const isFuture=ws>nowWS;
+      weeks.push({start:new Date(ws),end:new Date(we),isCurrent,isFuture});
+      ws=new Date(ws);ws.setDate(ws.getDate()+7);
+    }
+    return weeks;
+  }
+  function inWeek(dateStr,week){
+    if(!dateStr)return false;
+    const d=new Date(dateStr+'T00:00:00');
+    return d>=week.start&&d<=week.end;
+  }
+  function fmtWeek(week){
+    const opts={month:'short',day:'numeric'};
+    return week.start.toLocaleDateString('en-US',opts)+' – '+week.end.toLocaleDateString('en-US',opts);
+  }
+
+  const clientList=clients||[];
+  const jobList=jobs||[];
+  const woList=wos||[];
+  const payoutList=woContractors||[];
+
+  const woIdToPeople={};
+  payoutList.forEach(p=>{
+    if(!woIdToPeople[p.wo_id])woIdToPeople[p.wo_id]=[];
+    woIdToPeople[p.wo_id].push(p);
+  });
+
+  const clientCards=clientList.map(client=>{
+    const locCls=client.location&&client.location.includes('Phoenix')?'badge-phx':'badge-br';
+    const allClientWOs=woList.filter(w=>w.jobs&&w.jobs.client_id===client.id);
+
+    // Month offset for this client
+    const now=new Date();
+    const offset=getClientMonthOffset(client.id);
+    const monthIdx=now.getMonth()+offset;
+    const monthStart=new Date(now.getFullYear(),monthIdx,1);
+    const monthEnd=new Date(now.getFullYear(),monthIdx+1,0,23,59,59);
+    const inMonth=d=>{if(!d)return false;const dt=new Date(d+'T00:00:00');return dt>=monthStart&&dt<=monthEnd;};
+    const canGoBack=offset>-(now.getMonth());
+    const canGoForward=offset<2;
+    const monthName=monthStart.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+    // Monthly totals
+    const monthJobs=jobList.filter(j=>j.client_id===client.id&&inMonth(j.due_date));
+    const monthWOs=allClientWOs.filter(w=>inMonth(w.jobs&&w.jobs.due_date));
+    const monthInvoice=monthWOs.reduce((s,w)=>s+Number(w.client_invoice_amount||0),0);
+    const monthPayouts=[];
+    monthWOs.forEach(wo=>(woIdToPeople[wo.id]||[]).forEach(p=>monthPayouts.push(p)));
+    const monthPayoutTotal=monthPayouts.reduce((s,p)=>s+Number(p.payment_amount||0),0);
+    const monthMargin=monthInvoice-monthPayoutTotal;
+    const monthTypeCounts={};
+    monthJobs.forEach(j=>{if(j.job_type)monthTypeCounts[j.job_type]=(monthTypeCounts[j.job_type]||0)+1;});
+
+    // Weekly breakdown — only weeks within selected month
+    const weeks=getWeeksInMonth(monthStart,monthEnd);
+    const weekRows=weeks.map(week=>{
+      const weekJobs=jobList.filter(j=>j.client_id===client.id&&inWeek(j.due_date,week));
+      const weekWOs=allClientWOs.filter(w=>inWeek(w.jobs&&w.jobs.due_date,week));
+      const invoiceTotal=weekWOs.reduce((s,w)=>s+Number(w.client_invoice_amount||0),0);
+      const weekPayouts=[];
+      weekWOs.forEach(wo=>(woIdToPeople[wo.id]||[]).forEach(p=>weekPayouts.push(p)));
+      const payoutTotal=weekPayouts.reduce((s,p)=>s+Number(p.payment_amount||0),0);
+      if(weekJobs.length===0&&invoiceTotal===0&&payoutTotal===0)return '<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><div style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.5px">'+fmtWeek(week)+'</div><div style="font-size:11px;color:var(--text3);font-family:var(--mono);font-style:italic">— No jobs —</div></div>';
+
+      const typeCounts={};
+      weekJobs.forEach(j=>{if(j.job_type)typeCounts[j.job_type]=(typeCounts[j.job_type]||0)+1;});
+
+      const typeHTML=Object.keys(typeCounts).length>0
+        ?'<div style="margin-bottom:12px">'
+          +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:5px">JOBS BY TYPE</div>'
+          +Object.entries(typeCounts).map(([type,count])=>
+            '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0">'
+              +'<span style="color:var(--text2)">'+type+'</span>'
+              +'<span style="font-family:var(--mono);color:var(--text);font-weight:600">'+count+'</span>'
+            +'</div>'
+          ).join('')
+        +'</div>'
+        :'';
+
+      const invoiceHTML=invoiceTotal>0
+        ?'<div style="margin-bottom:12px">'
+          +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:5px">CLIENT INVOICE</div>'
+          +'<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0">'
+            +'<span style="color:var(--text2)">Total</span>'
+            +'<span style="font-family:var(--mono);color:#4ade80;font-weight:600">'+fmtMoney(invoiceTotal)+'</span>'
+          +'</div>'
+        +'</div>'
+        :'';
+
+      const contractorHTML=weekPayouts.length>0
+        ?'<div style="margin-bottom:12px">'
+          +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:5px">CONTRACTOR PAYOUTS</div>'
+          +weekPayouts.map(p=>
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">'
+              +'<div>'
+                +'<div style="color:var(--text2)">'+(p.people?p.people.company_name:'—')+'</div>'
+                +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">'+(p.payout_date?'Paid: '+fmtDate(p.payout_date):'No payout date')+'</div>'
+              +'</div>'
+              +'<span style="font-family:var(--mono);color:#f87171;font-weight:600;margin-left:12px">'+fmtMoney(p.payment_amount)+'</span>'
+            +'</div>'
+          ).join('')
+          +'<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;margin-top:2px">'
+            +'<span style="color:var(--text2);font-family:var(--mono)">TOTAL PAID OUT</span>'
+            +'<span style="font-family:var(--mono);color:#f87171;font-weight:600">'+fmtMoney(payoutTotal)+'</span>'
+          +'</div>'
+        +'</div>'
+        :'';
+
+      const marginHTML=(invoiceTotal>0&&payoutTotal>0)
+        ?'<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid var(--border);margin-top:2px">'
+          +'<span style="color:var(--text2);font-family:var(--mono)">MARGIN</span>'
+          +'<span style="font-family:var(--mono);font-weight:600;color:'+(invoiceTotal-payoutTotal>=0?'#4ade80':'#f87171')+'">'+fmtMoney(invoiceTotal-payoutTotal)+'</span>'
+        +'</div>'
+        :'';
+
+      const weekLabel=week.isCurrent?'THIS WEEK — '+fmtWeek(week):'WEEK OF '+fmtWeek(week);
+      const labelColor=week.isCurrent?'var(--accent)':week.isFuture?'#60a5fa':'var(--text3)';
+      return '<div style="padding:14px;border-bottom:1px solid var(--border);'+(week.isCurrent?'background:rgba(240,165,0,.04)':week.isFuture?'background:rgba(59,130,246,.03)':'')+'">'
+        +'<div style="font-family:var(--mono);font-size:11px;color:'+labelColor+';margin-bottom:10px;letter-spacing:.5px">'+weekLabel+'</div>'
+        +typeHTML+invoiceHTML+contractorHTML+marginHTML
+      +'</div>';
+    }).join('');
+
+    const monthSummaryHTML=
+      '<div style="padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+          +'<button onclick="setClientMonthOffset(\''+client.id+'\','+(offset-1)+')" style="background:'+(canGoBack?'var(--surface)':'transparent')+';border:1px solid '+(canGoBack?'var(--border)':'transparent')+';color:'+(canGoBack?'var(--text2)':'var(--text3)')+';cursor:'+(canGoBack?'pointer':'default')+';padding:2px 10px;font-size:16px;font-family:var(--mono)">&#8249;</button>'
+          +'<div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px">'+monthName.toUpperCase()+'</div>'
+          +'<button onclick="setClientMonthOffset(\''+client.id+'\','+(offset+1)+')" style="background:'+(canGoForward?'var(--surface)':'transparent')+';border:1px solid '+(canGoForward?'var(--border)':'transparent')+';color:'+(canGoForward?'var(--text2)':'var(--text3)')+';cursor:'+(canGoForward?'pointer':'default')+';padding:2px 10px;font-size:16px;font-family:var(--mono)">&#8250;</button>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+          +'<div style="background:var(--surface);border:1px solid var(--border);padding:8px 10px">'
+            +'<div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent)">'+monthJobs.length+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">Total Jobs</div>'
+          +'</div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);padding:8px 10px">'
+            +'<div style="font-family:var(--mono);font-size:14px;font-weight:600;color:#4ade80">'+fmtMoney(monthInvoice)+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">Invoiced</div>'
+          +'</div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);padding:8px 10px">'
+            +'<div style="font-family:var(--mono);font-size:14px;font-weight:600;color:#f87171">'+fmtMoney(monthPayoutTotal)+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">Paid Out</div>'
+          +'</div>'
+          +'<div style="background:var(--surface);border:1px solid var(--border);padding:8px 10px">'
+            +'<div style="font-family:var(--mono);font-size:14px;font-weight:600;color:'+(monthMargin>=0?'#4ade80':'#f87171')+'">'+fmtMoney(monthMargin)+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">Margin</div>'
+          +'</div>'
+        +'</div>'
+        +(Object.keys(monthTypeCounts).length>0
+          ?'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:5px">BY TYPE</div>'
+            +Object.entries(monthTypeCounts).map(([type,count])=>
+              '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">'
+                +'<span style="color:var(--text2)">'+type+'</span>'
+                +'<span style="font-family:var(--mono);color:var(--text);font-weight:600">'+count+'</span>'
+              +'</div>'
+            ).join('')
+          :'<div style="font-size:11px;color:var(--text3)">No jobs this month</div>')
+      +'</div>';
+
+    return '<div style="flex-shrink:0;width:320px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);display:flex;flex-direction:column;max-height:720px">'
+      +'<div style="padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0">'
+        +'<div style="font-size:15px;font-weight:600;margin-bottom:6px">'+client.name+'</div>'
+        +'<span class="badge '+locCls+'">📍 '+(client.location||'—')+'</span>'
+      +'</div>'
+      +monthSummaryHTML
+      +'<div style="overflow-y:auto;flex:1">'
+        +(weekRows.trim().length>0?weekRows:'<div style="padding:20px;color:var(--text3);font-size:12px;font-family:var(--mono)">No data this month</div>')
+      +'</div>'
+    +'</div>';
+  }).join('');
+
+  // Build calendar — uses its own month offset stored separately
+  const calOffset=window._calOffset||0;
+  const now=new Date();
+  const calMonthIdx=now.getMonth()+calOffset;
+  const calYear=now.getFullYear();
+  const calMonthStart=new Date(calYear,calMonthIdx,1);
+  const calMonthEnd=new Date(calYear,calMonthIdx+1,0);
+  const calMonthName=calMonthStart.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const calCanBack=calOffset>-(now.getMonth());
+  const calCanFwd=calOffset<2;
+
+  // Build day cells
+  const firstDow=calMonthStart.getDay(); // 0=Sun
+  const totalDays=calMonthEnd.getDate();
+  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Map jobs to their due dates within this cal month
+  const dayJobMap={};
+  jobList.forEach(j=>{
+    if(!j.due_date)return;
+    const d=new Date(j.due_date+'T00:00:00');
+    if(d.getFullYear()===calYear&&d.getMonth()===calMonthIdx){
+      const day=d.getDate();
+      if(!dayJobMap[day])dayJobMap[day]=[];
+      dayJobMap[day].push(j);
+    }
+  });
+
+  const todayDate=now.getDate(),todayMonth=now.getMonth(),todayYear=now.getFullYear();
+  let dayCells='';
+  // Empty cells before month start
+  for(let i=0;i<firstDow;i++)dayCells+='<div style="min-height:60px;padding:4px;background:var(--surface);border:1px solid var(--border);opacity:.2"></div>';
+  for(let d=1;d<=totalDays;d++){
+    const isToday=d===todayDate&&calMonthIdx===todayMonth&&calYear===todayYear;
+    const djobs=dayJobMap[d]||[];
+    const clientNames=[...new Set(djobs.map(j=>j.clients?j.clients.name:''))].filter(Boolean);
+    const hasJobs=djobs.length>0;
+    dayCells+='<div onclick="showCalDay('+d+','+calMonthIdx+','+calYear+')" style="min-height:60px;padding:4px;background:'+(isToday?'rgba(240,165,0,.1)':'var(--surface)')+';border:1px solid '+(isToday?'var(--accent)':'var(--border)')+';cursor:'+(hasJobs?'pointer':'default')+';position:relative">'
+      +'<div style="font-family:var(--mono);font-size:11px;color:'+(isToday?'var(--accent)':hasJobs?'var(--text)':'var(--text3)')+'">'+d+'</div>'
+      +(hasJobs
+        ?'<div style="font-size:9px;color:var(--accent);font-family:var(--mono);margin-top:2px">'+djobs.length+' job'+(djobs.length>1?'s':'')+'</div>'
+          +'<div style="font-size:9px;color:var(--text2);margin-top:2px;line-height:1.3">'+clientNames.slice(0,2).map(n=>n.length>12?n.slice(0,11)+'…':n).join('<br>')+'</div>'
+        :'')
+    +'</div>';
+  }
+
+  const calHTML='<div style="flex-shrink:0;width:40%;display:flex;flex-direction:column;gap:0">'
+    // Calendar header
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #60a5fa;padding:14px 16px;box-sizing:border-box;width:100%">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        +'<button onclick="window._calOffset='+(calOffset-1)+';renderDashboard()" style="background:'+(calCanBack?'var(--surface2)':'transparent')+';border:1px solid '+(calCanBack?'var(--border)':'transparent')+';color:'+(calCanBack?'var(--text2)':'var(--text3)')+';cursor:'+(calCanBack?'pointer':'default')+';padding:2px 10px;font-size:16px;font-family:var(--mono)">&#8249;</button>'
+        +'<div style="font-family:var(--mono);font-size:11px;color:#60a5fa;letter-spacing:1px">'+calMonthName.toUpperCase()+'</div>'
+        +'<button onclick="window._calOffset='+(calOffset+1)+';renderDashboard()" style="background:'+(calCanFwd?'var(--surface2)':'transparent')+';border:1px solid '+(calCanFwd?'var(--border)':'transparent')+';color:'+(calCanFwd?'var(--text2)':'var(--text3)')+';cursor:'+(calCanFwd?'pointer':'default')+';padding:2px 10px;font-size:16px;font-family:var(--mono)">&#8250;</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px">'
+        +dayNames.map(n=>'<div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;padding:2px 0">'+n+'</div>').join('')
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">'+dayCells+'</div>'
+    +'</div>'
+    // Day detail panel
+    +'<div id="cal-detail" style="background:var(--surface);border:1px solid var(--border);border-top:none;padding:0;min-height:40px;box-sizing:border-box;width:100%">'
+      +'<div style="padding:14px 16px;font-size:12px;color:var(--text3);font-family:var(--mono)">Click a day to see details</div>'
+    +'</div>'
+  +'</div>';
+
+  setMain(
+    '<div class="page-header"><div><div class="page-title">Dashboard</div><div class="page-sub">Monthly view by client</div></div></div>'
+    +(clientList.length===0
+      ?'<div class="empty"><div class="empty-icon">🏢</div><div class="empty-text">No clients yet</div><button class="btn btn-primary" onclick="navigate(\'clients\')">Add Clients →</button></div>'
+      :'<div style="display:flex;gap:0;align-items:flex-start;width:100%">'
+          +'<div style="width:50%;overflow-x:auto;padding-bottom:16px;flex-shrink:0">'
+            +'<div style="display:flex;gap:16px;padding-right:16px;min-width:max-content">'+clientCards+'</div>'
+          +'</div>'
+          +'<div style="width:16px;flex-shrink:0;align-self:stretch;border-left:2px solid var(--border);margin:0 16px 16px 0"></div>'
+          +calHTML
+        +'</div>'
+    )
+  );
+}
+
+function showCalDay(day,monthIdx,year){
+  const dateStr=year+'-'+String(monthIdx+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  const panel=document.getElementById('cal-detail');
+  if(!panel)return;
+  // Get jobs from already-loaded data by re-querying supabase for this date
+  sb.from('jobs').select('*,clients(name)').eq('due_date',dateStr).then(({data:dayJobs})=>{
+    if(!dayJobs||dayJobs.length===0){
+      panel.innerHTML='<div style="padding:14px 16px;font-size:12px;color:var(--text3);font-family:var(--mono)">No jobs due on '+new Date(dateStr+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'</div>';
+      return;
+    }
+    const d=new Date(dateStr+'T00:00:00');
+    panel.innerHTML='<div style="padding:12px 16px;border-bottom:1px solid var(--border)">'
+      +'<div style="font-family:var(--mono);font-size:10px;color:#60a5fa;letter-spacing:1px;margin-bottom:8px">'+d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}).toUpperCase()+'</div>'
+      +dayJobs.map(j=>'<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px">'+(j.job_number?'<span style="font-family:var(--mono);color:var(--text3);font-size:11px">#'+j.job_number+' — </span>':'')+j.title+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">'
+          +(j.clients?'<span style="font-size:11px;color:var(--text2)">'+j.clients.name+'</span>':'')
+          +(j.job_type?'<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">'+j.job_type+'</span>':'')
+          +'<span class="badge badge-'+j.status+'">'+j.status.replace('_',' ').toUpperCase()+'</span>'
+        +'</div>'
+      +'</div>').join('')
+    +'</div>';
+  });
+}
+async function renderJobs(){
+  setMain('<div class="loading"><span class="spinner"></span>Loading jobs...</div>');
+  const {data:jobs}=await sb.from('jobs').select('*,clients(name)').order('created_at',{ascending:false});
+  const all=jobs||[];
+  const filtered=all.filter(j=>{
+    const sOk=jobFilter==='all'||j.status===jobFilter;
+    const lOk=jobLocFilter==='all'||j.location===jobLocFilter;
+    return sOk&&lOk;
+  });
+  const jobIds=filtered.map(j=>j.id);
+  let matsMap={},tasksMap={},assignMap={};
+  if(jobIds.length>0){
+    const [{data:allMats},{data:allTasks},{data:allAssign}]=await Promise.all([
+      sb.from('materials').select('*').in('job_id',jobIds),
+      sb.from('tasks').select('*').in('job_id',jobIds),
+      sb.from('job_assignments').select('*,people(company_name)').in('job_id',jobIds),
+    ]);
+    (allMats||[]).forEach(m=>{if(!matsMap[m.job_id])matsMap[m.job_id]=[];matsMap[m.job_id].push(m);});
+    (allTasks||[]).forEach(t=>{if(!tasksMap[t.job_id])tasksMap[t.job_id]=[];tasksMap[t.job_id].push(t);});
+    (allAssign||[]).forEach(a=>{if(!assignMap[a.job_id])assignMap[a.job_id]=[];assignMap[a.job_id].push(a);});
+  }
+  const cards=filtered.map(job=>{
+    const mats=matsMap[job.id]||[];
+    const tasks=tasksMap[job.id]||[];
+    const assigns=assignMap[job.id]||[];
+    const done=tasks.filter(t=>t.status==='complete').length;
+    const hasDetail=mats.length>0||tasks.length>0||assigns.length>0;
+    return '<div class="card">'
+      +'<div class="card-header">'
+        +'<div style="flex:1">'
+          +'<div class="card-title clickable" onclick="navigate(\'job-detail\',\''+job.id+'\')">'
+            +(job.job_number?'<span style="font-family:var(--mono);color:var(--text3);font-size:12px">#'+job.job_number+' &mdash; </span>':'')+job.title
+          +'</div>'
+          +'<div class="card-meta">'
+            +(job.location?locBadge(job.location):'')
+            +(job.clients?'<div class="meta-item"><span>Client: </span>'+job.clients.name+'</div>':'')
+            +(job.job_type?'<div class="meta-item"><span>Type: </span>'+job.job_type+'</div>':'')
+            +(job.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(job.due_date)+'</div>':'')
+          +'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">'
+          +statusBadge(job.status)
+          +'<button class="btn btn-ghost btn-sm" onclick="navigate(\'job-detail\',\''+job.id+'\')">Open &rarr;</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="deleteJob(\''+job.id+'\')">&#128465;</button>'
+        +'</div>'
+      +'</div>'
+      +(hasDetail
+        ?'<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px">'
+          +(mats.length>0
+            ?'<div>'
+              +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px">MATERIALS</div>'
+              +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+                +mats.map(m=>'<span style="background:var(--surface2);border:1px solid var(--border);padding:3px 10px;font-size:12px;font-family:var(--mono);color:var(--text2)">'+m.quantity+(m.unit?' '+m.unit:'')+' &mdash; '+m.name+'</span>').join('')
+              +'</div>'
+            +'</div>'
+            :'')
+          +(tasks.length>0
+            ?'<div>'
+              +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px">TASKS ('+done+'/'+tasks.length+' complete)</div>'
+              +'<div style="display:flex;flex-direction:column;gap:5px">'
+                +tasks.map(t=>'<div style="display:flex;align-items:center;gap:8px;font-size:12px">'
+                  +'<div style="width:13px;height:13px;border:1px solid var(--border);flex-shrink:0;background:'+(t.status==='complete'?'var(--success)':'transparent')+';display:flex;align-items:center;justify-content:center;font-size:9px;color:#000">'+(t.status==='complete'?'&#10003;':'')+'</div>'
+                  +'<span style="'+(t.status==='complete'?'text-decoration:line-through;color:var(--text3)':'color:var(--text2)')+'">'+t.title+'</span>'
+                +'</div>').join('')
+              +'</div>'
+            +'</div>'
+            :'')
+          +(assigns.length>0
+            ?'<div>'
+              +'<div style="font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px">ASSIGNED</div>'
+              +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+                +assigns.map(a=>'<span style="background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.2);padding:3px 10px;font-size:12px;color:var(--accent);font-family:var(--mono)">'+(a.people?a.people.company_name:'&mdash;')+'</span>').join('')
+              +'</div>'
+            +'</div>'
+            :'')
+        +'</div>'
+        :'')
+    +'</div>';
+  }).join('');
+
+  setMain(
+    '<div class="page-header">'
+      +'<div><div class="page-title">Jobs</div><div class="page-sub">'+filtered.length+' of '+all.length+' jobs</div></div>'
+      +'<button class="btn btn-primary" onclick="showCreateJobModal()">+ New Job</button>'
+    +'</div>'
+    +'<div class="filters">'
+      +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">STATUS:</span>'
+      +['all','open','in_progress','complete'].map(f=>'<div class="filter-chip '+(jobFilter===f?'active':'')+'" onclick="jobFilter=\''+f+'\';renderJobs()">'+f.replace('_',' ').toUpperCase()+'</div>').join('')
+    +'</div>'
+    +'<div class="filters">'
+      +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">LOCATION:</span>'
+      +'<div class="filter-chip '+(jobLocFilter==='all'?'active':'')+'" onclick="jobLocFilter=\'all\';renderJobs()">ALL</div>'
+      +LOCATIONS.map(l=>'<div class="filter-chip '+(jobLocFilter===l?'active':'')+'" onclick="jobLocFilter=\''+l+'\';renderJobs()">'+l+'</div>').join('')
+    +'</div>'
+    +(filtered.length===0?'<div class="empty"><div class="empty-icon">&#9874;</div><div class="empty-text">No jobs found</div><button class="btn btn-primary" onclick="showCreateJobModal()">Create Job</button></div>':'')
+    +cards
+  );
+}
+async function showCreateJobModal(){
+  const {data:clients}=await sb.from('clients').select('id,name').order('name');
+  showModal('New Job',`
+    <div class="form-row">
+      <div class="form-group"><label>Job #</label><input id="m-jnum" placeholder="e.g. 2025-001"></div>
+      <div class="form-group"><label>Job Title / Name</label><input id="m-title" placeholder="e.g. Oak St Node Upgrade"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Job Type</label>
+        <select id="m-jtype"><option value="">— Select Type —</option>${JOB_TYPES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')}</select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="m-status"><option value="open">Open</option><option value="in_progress">In Progress</option><option value="complete">Complete</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Location</label>
+        <select id="m-loc"><option value="">— Select Location —</option>${LOCATIONS.map(l=>'<option value="'+l+'">'+l+'</option>').join('')}</select>
+      </div>
+      <div class="form-group"><label>Client</label>
+        <select id="m-client"><option value="">— Select Client —</option>${(clients||[]).map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('')}</select>
+      </div>
+    </div>
+    <div class="form-group"><label>Due / Execution Date</label><input id="m-due" type="date"></div>
+    <div class="form-group"><label>Notes</label><textarea id="m-notes" placeholder="Any notes..."></textarea></div>
+  `,'<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createJob()">Create Job</button>');
+}
+
+async function createJob(){
+  const job_number=document.getElementById('m-jnum').value.trim();
+  const title=document.getElementById('m-title').value.trim();
+  const job_type=document.getElementById('m-jtype').value;
+  const status=document.getElementById('m-status').value;
+  const location=document.getElementById('m-loc').value;
+  const client_id=document.getElementById('m-client').value;
+  const due_date=document.getElementById('m-due').value;
+  const notes=document.getElementById('m-notes').value;
+  if(!title)return toast('Job title required','error');
+  const {data:job,error}=await sb.from('jobs').insert({job_number:job_number||null,title,job_type:job_type||null,status,location:location||null,client_id:client_id||null,due_date:due_date||null,notes:notes||null}).select().single();
+  if(error)return toast('Error: '+error.message,'error');
+  await sb.from('work_orders').insert({job_id:job.id,wo_number:job_number||('WO-'+job.id.toString().slice(0,8))});
+  toast('Job created — Work Order auto-generated!');
+  closeModal();renderJobs();
+}
+
+async function deleteJob(id){
+  if(!confirm('Delete this job and all related data?'))return;
+  await sb.from('tasks').delete().eq('job_id',id);
+  await sb.from('line_items').delete().eq('job_id',id);
+  await sb.from('materials').delete().eq('job_id',id);
+  await sb.from('job_assignments').delete().eq('job_id',id);
+  const {data:wos}=await sb.from('work_orders').select('id').eq('job_id',id);
+  for(const wo of wos||[])await sb.from('wo_contractors').delete().eq('wo_id',wo.id);
+  await sb.from('work_orders').delete().eq('job_id',id);
+  await sb.from('jobs').delete().eq('id',id);
+  toast('Job deleted');renderJobs();
+}
+
+async function renderJobDetail(id){
+  setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
+  const [{data:job},{data:tasks},{data:materials},{data:assignments},{data:allPeople}]=await Promise.all([
+    sb.from('jobs').select('*,clients(name)').eq('id',id).single(),
+    sb.from('tasks').select('*,people(company_name)').eq('job_id',id).order('created_at'),
+    sb.from('materials').select('*').eq('job_id',id).order('created_at'),
+    sb.from('job_assignments').select('*,people(company_name,role)').eq('job_id',id),
+    sb.from('people').select('id,company_name,role'),
+  ]);
+  if(!job)return setMain('<div class="empty">Job not found</div>');
+  setMain(`
+    <div class="back-btn" onclick="navigate('jobs')">← Back to Jobs</div>
+    <div class="page-header">
+      <div>
+        <div class="page-title">${job.job_number?'<span style="font-family:var(--mono);color:var(--text3);font-size:14px">#'+job.job_number+' — </span>':''}${job.title}</div>
+        <div class="card-meta" style="margin-top:6px">
+          ${job.location?locBadge(job.location):''}
+          ${job.clients?'<div class="meta-item"><span>Client: </span>'+job.clients.name+'</div>':''}
+          ${job.job_type?'<div class="meta-item"><span>Type: </span>'+job.job_type+'</div>':''}
+          ${job.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(job.due_date)+'</div>':''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${statusBadge(job.status)}
+        <select onchange="updateJobStatus('${id}',this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:12px;font-family:var(--mono)">
+          <option value="open" ${job.status==='open'?'selected':''}>Open</option>
+          <option value="in_progress" ${job.status==='in_progress'?'selected':''}>In Progress</option>
+          <option value="complete" ${job.status==='complete'?'selected':''}>Complete</option>
+        </select>
+      </div>
+    </div>
+    ${job.notes?'<div style="background:var(--surface2);border:1px solid var(--border);padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--text2)">'+job.notes+'</div>':''}
+    <div class="tabs" id="job-tabs">
+      <div class="tab active" onclick="switchJobTab('materials')">Materials (${(materials||[]).length})</div>
+      <div class="tab" onclick="switchJobTab('tasks')">Tasks (${(tasks||[]).length})</div>
+      <div class="tab" onclick="switchJobTab('assignments')">Assigned (${(assignments||[]).length})</div>
+    </div>
+
+    <div id="tab-tasks" style="display:none">
+      <div style="margin-bottom:12px">
+        ${(tasks||[]).map(t=>`<div class="task-item">
+          <div class="task-check ${t.status==='complete'?'done':''}" onclick="toggleTask('${t.id}','${t.status}','${id}')">${t.status==='complete'?'✓':''}</div>
+          <div class="task-text ${t.status==='complete'?'done':''}">${t.title}${t.people?'<span style="color:var(--text3);font-size:11px;margin-left:8px">→ '+t.people.company_name+'</span>':''}</div>
+          <button class="btn btn-ghost btn-sm" onclick="deleteTask('${t.id}','${id}')">✕</button>
+        </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0">No tasks yet</div>'}
+      </div>
+      <div class="inline-form">
+        <input id="new-task" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask('${id}')">
+        <select id="new-task-assignee" style="max-width:200px"><option value="">Unassigned</option>${(allPeople||[]).map(p=>'<option value="'+p.id+'">'+p.company_name+'</option>').join('')}</select>
+        <button class="btn btn-primary btn-sm" onclick="addTask('${id}')">+ Add</button>
+      </div>
+    </div>
+    <div id="tab-materials">
+      ${(materials||[]).length>0?`<table class="data-table" style="margin-bottom:12px">
+        <thead><tr><th>Material</th><th>Quantity</th><th>Unit</th><th></th></tr></thead>
+        <tbody>${materials.map(m=>`<tr><td>${m.name}</td><td style="font-family:var(--mono)">${m.quantity}</td><td style="color:var(--text2)">${m.unit||'—'}</td><td><button class="btn btn-ghost btn-sm" onclick="deleteMaterial('${m.id}','${id}')">✕</button></td></tr>`).join('')}</tbody>
+      </table>`:'<div style="color:var(--text3);font-size:13px;padding:12px 0">No materials yet</div>'}
+      <button class="btn btn-secondary btn-sm" onclick="showAddMaterialModal('${id}')">+ Add Material</button>
+    </div>
+    <div id="tab-assignments" style="display:none">
+      <div style="margin-bottom:12px">
+        ${(assignments||[]).map(a=>`<div class="task-item">
+          <div style="flex:1;font-size:13px">${a.people?a.people.company_name:'—'} <span style="color:var(--text3);font-size:11px">(${a.people?a.people.role||'contractor':''})</span></div>
+          <button class="btn btn-ghost btn-sm" onclick="removeAssignment('${a.id}','${id}')">✕</button>
+        </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0">No contractors assigned</div>'}
+      </div>
+      <div class="inline-form">
+        <select id="new-assign"><option value="">Select contractor...</option>${(allPeople||[]).map(p=>'<option value="'+p.id+'">'+p.company_name+'</option>').join('')}</select>
+        <button class="btn btn-primary btn-sm" onclick="addAssignment('${id}')">+ Assign</button>
+      </div>
+    </div>
+  `);
+}
+
+function switchJobTab(tab){
+  ['materials','tasks','assignments'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+  document.querySelectorAll('#job-tabs .tab').forEach((el,i)=>el.classList.toggle('active',['materials','tasks','assignments'][i]===tab));
+}
+async function updateJobStatus(id,status){await sb.from('jobs').update({status}).eq('id',id);toast('Status updated');}
+async function toggleTask(id,status,jobId){await sb.from('tasks').update({status:status==='complete'?'open':'complete'}).eq('id',id);renderJobDetail(jobId);}
+async function addTask(jobId){
+  const title=document.getElementById('new-task').value.trim();if(!title)return;
+  const assignee=document.getElementById('new-task-assignee').value;
+  await sb.from('tasks').insert({job_id:jobId,title,status:'open',assigned_to:assignee||null});
+  renderJobDetail(jobId);
+}
+async function deleteTask(id,jobId){await sb.from('tasks').delete().eq('id',id);renderJobDetail(jobId);}
+async function addAssignment(jobId){
+  const pid=document.getElementById('new-assign').value;if(!pid)return;
+  await sb.from('job_assignments').insert({job_id:jobId,person_id:pid});
+  toast('Assigned');renderJobDetail(jobId);
+}
+async function removeAssignment(id,jobId){await sb.from('job_assignments').delete().eq('id',id);renderJobDetail(jobId);}
+function showAddLineItemModal(jobId){}
+async function addLineItem(jobId){
+  const code=document.getElementById('li-code').value.trim(),price=parseFloat(document.getElementById('li-price').value)||0,desc=document.getElementById('li-desc').value,qty=parseFloat(document.getElementById('li-qty').value)||1;
+  if(!code)return toast('Code required','error');
+  await sb.from('line_items').insert({job_id:jobId,code,description:desc||null,unit_price:price,quantity:qty});
+  toast('Added');closeModal();renderJobDetail(jobId);
+}
+async function deleteLineItem(id,jobId){await sb.from('line_items').delete().eq('id',id);renderJobDetail(jobId);}
+function showAddMaterialModal(jobId){
+  window._currentJobId = jobId;
+  showModal('Add Material',`
+    <div class="form-group"><label>Material Name</label><input id="mat-name" placeholder="e.g. Fiber, Amplifier, Conduit"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantity</label><input id="mat-qty" type="number" step="0.01" value="1"></div>
+      <div class="form-group"><label>Unit</label><input id="mat-unit" placeholder="ft, each, spool..."></div>
+    </div>
+  `,'<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="addMaterial(window._currentJobId)">Add</button>');
+}
+async function addMaterial(jobId){
+  const name=document.getElementById('mat-name').value.trim(),qty=parseFloat(document.getElementById('mat-qty').value)||1,unit=document.getElementById('mat-unit').value;
+  if(!name)return toast('Name required','error');
+  await sb.from('materials').insert({job_id:jobId,name,quantity:qty,unit:unit||null});
+  toast('Added');closeModal();renderJobDetail(jobId);
+}
+async function deleteMaterial(id,jobId){await sb.from('materials').delete().eq('id',id);renderJobDetail(jobId);}
+
+async function renderWorkOrders(){
+  setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
+  const {data:wos}=await sb.from('work_orders').select('*,jobs(title,job_number,location,status,due_date,clients(name))').order('created_at',{ascending:false});
+  setMain(`
+    <div class="page-header"><div><div class="page-title">Work Orders</div><div class="page-sub">Auto-created with each job</div></div></div>
+    ${(wos||[]).length===0?'<div class="empty"><div class="empty-icon">🗂</div><div class="empty-text">No work orders yet — create a job first</div></div>':''}
+    ${(wos||[]).map(w=>`
+      <div class="card" style="cursor:pointer" onclick="navigate('wo-detail','${w.id}')">
+        <div class="card-header">
+          <div style="flex:1">
+            <div class="card-title clickable">WO #${w.wo_number}</div>
+            <div class="card-meta">
+              ${w.jobs&&w.jobs.location?locBadge(w.jobs.location):''}
+              ${w.jobs&&w.jobs.clients?'<div class="meta-item"><span>Client: </span>'+w.jobs.clients.name+'</div>':''}
+              ${w.jobs?'<div class="meta-item"><span>Job: </span>'+(w.jobs.job_number?'#'+w.jobs.job_number+' — ':'')+w.jobs.title+'</div>':''}
+              ${w.client_invoice_amount?'<div class="meta-item money-pos"><span>Invoice: </span>'+fmtMoney(w.client_invoice_amount)+'</div>':''}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${w.jobs&&w.jobs.status?statusBadge(w.jobs.status):''}
+            <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">Open →</span>
+          </div>
+        </div>
+      </div>`).join('')}
+  `);
+}
+
+async function renderWODetail(id){
+  setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
+  const [{data:wo},{data:contractors},{data:allPeople}]=await Promise.all([
+    sb.from('work_orders').select('*,jobs(title,job_number,location,status,due_date,clients(name))').eq('id',id).single(),
+    sb.from('wo_contractors').select('*,people(company_name,phone)').eq('wo_id',id),
+    sb.from('people').select('id,company_name,phone'),
+  ]);
+  if(!wo)return setMain('<div class="empty">Work order not found</div>');
+  const totalPaid=(contractors||[]).reduce((s,c)=>s+Number(c.payment_amount||0),0);
+  const invoice=Number(wo.client_invoice_amount||0);
+  const margin=invoice-totalPaid;
+  setMain(`
+    <div class="back-btn" onclick="navigate('workorders')">← Back to Work Orders</div>
+    <div class="page-header">
+      <div>
+        <div class="page-title">WO #${wo.wo_number}</div>
+        <div class="card-meta" style="margin-top:6px">
+          ${wo.jobs&&wo.jobs.location?locBadge(wo.jobs.location):''}
+          ${wo.jobs&&wo.jobs.clients?'<div class="meta-item"><span>Client: </span>'+wo.jobs.clients.name+'</div>':''}
+          ${wo.jobs?'<div class="meta-item"><span>Job: </span>'+(wo.jobs.job_number?'#'+wo.jobs.job_number+' — ':'')+wo.jobs.title+'</div>':''}
+          ${wo.jobs&&wo.jobs.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(wo.jobs.due_date)+'</div>':''}
+        </div>
+      </div>
+      ${wo.jobs&&wo.jobs.status?statusBadge(wo.jobs.status):''}
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);padding:20px;margin-bottom:24px">
+      <div class="section-title">Financials</div>
+      <div class="form-row" style="margin-bottom:0">
+        <div>
+          <label>Client Invoice Amount</label>
+          <div style="display:flex;gap:8px">
+            <input id="wo-invoice" type="number" step="0.01" value="${wo.client_invoice_amount||''}" placeholder="0.00" style="flex:1">
+            <button class="btn btn-primary btn-sm" onclick="saveWOInvoice('${id}')">Save</button>
+          </div>
+        </div>
+        <div>
+          <label>Summary</label>
+          <div style="font-family:var(--mono);font-size:13px;line-height:2.2">
+            <div>Invoice: <span class="money-pos">${fmtMoney(invoice)}</span></div>
+            <div>Paid Out: <span class="money-neu">${fmtMoney(totalPaid)}</span></div>
+            <div>Margin: <span class="${margin>=0?'money-pos':'money-neg'}">${fmtMoney(margin)}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section-title">Contractors on this Work Order</div>
+    ${(contractors||[]).map(c=>`
+      <div class="contractor-row">
+        <div>
+          <div class="cr-name">${c.people?c.people.company_name:'—'}</div>
+          ${c.people&&c.people.phone?'<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">'+c.people.phone+'</div>':''}
+        </div>
+        <div style="flex:1"></div>
+        <div style="text-align:right">
+          <div class="cr-amount">${fmtMoney(c.payment_amount)}</div>
+          <div style="font-size:10px;color:var(--text3)">${c.payout_date?'Paid: '+fmtDate(c.payout_date):'No payout date'}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="removeWOContractor('${c.id}','${id}')">✕</button>
+      </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0;margin-bottom:12px">No contractors added yet</div>'}
+    <div style="margin-top:14px;background:var(--surface2);border:1px solid var(--border);padding:16px">
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">ADD CONTRACTOR PAYOUT</div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0"><label>Contractor</label>
+          <select id="wo-contractor"><option value="">— Select —</option>${(allPeople||[]).map(p=>'<option value="'+p.id+'">'+p.company_name+'</option>').join('')}</select>
+        </div>
+        <div class="form-group" style="margin-bottom:0"><label>Payment Amount ($)</label>
+          <input id="wo-payment" type="number" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px;margin-bottom:0"><label>Payout Date</label>
+        <input id="wo-payout-date" type="date">
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="addWOContractor('${id}')">+ Add Contractor</button>
+    </div>
+  `);
+}
+
+async function saveWOInvoice(id){
+  const val=parseFloat(document.getElementById('wo-invoice').value)||0;
+  await sb.from('work_orders').update({client_invoice_amount:val}).eq('id',id);
+  toast('Invoice saved');renderWODetail(id);
+}
+async function addWOContractor(woId){
+  const person_id=document.getElementById('wo-contractor').value;
+  const payment_amount=parseFloat(document.getElementById('wo-payment').value)||0;
+  const payout_date=document.getElementById('wo-payout-date').value;
+  if(!person_id)return toast('Select a contractor','error');
+  await sb.from('wo_contractors').insert({wo_id:woId,person_id,payment_amount,payout_date:payout_date||null});
+  toast('Contractor added');renderWODetail(woId);
+}
+async function removeWOContractor(id,woId){await sb.from('wo_contractors').delete().eq('id',id);renderWODetail(woId);}
+
+async function renderClients(){
+  setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
+  const {data:clients}=await sb.from('clients').select('*').order('name');
+  setMain(`
+    <div class="page-header">
+      <div><div class="page-title">Clients</div><div class="page-sub">Communications companies</div></div>
+      <button class="btn btn-primary" onclick="showCreateClientModal()">+ Add Client</button>
+    </div>
+    ${(clients||[]).length===0?'<div class="empty"><div class="empty-icon">🏢</div><div class="empty-text">Add your communications companies here</div></div>':''}
+    ${(clients||[]).map(c=>`
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">${c.name}</div>
+            <div class="card-meta">
+              ${c.location?locBadge(c.location):''}
+              ${c.contact_name?'<div class="meta-item"><span>Contact: </span>'+c.contact_name+'</div>':''}
+              ${c.phone?'<div class="meta-item"><span>Phone: </span>'+c.phone+'</div>':''}
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="deleteClient('${c.id}')">🗑</button>
+        </div>
+      </div>`).join('')}
+  `);
+}
+async function showCreateClientModal(){
+  showModal('Add Client',`
+    <div class="form-group"><label>Company Name</label><input id="m-cname" placeholder="e.g. Cox Communications"></div>
+    <div class="form-group"><label>Primary Location</label>
+      <select id="m-cloc"><option value="">— Select —</option>${LOCATIONS.map(l=>'<option value="'+l+'">'+l+'</option>').join('')}</select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Contact Name</label><input id="m-ccontact" placeholder="optional"></div>
+      <div class="form-group"><label>Phone</label><input id="m-cphone" placeholder="optional"></div>
+    </div>
+  `,'<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createClient()">Add Client</button>');
+}
+async function createClient(){
+  const name=document.getElementById('m-cname').value.trim(),location=document.getElementById('m-cloc').value,contact_name=document.getElementById('m-ccontact').value,phone=document.getElementById('m-cphone').value;
+  if(!name)return toast('Name required','error');
+  const {error}=await sb.from('clients').insert({name,location:location||null,contact_name:contact_name||null,phone:phone||null});
+  if(error)return toast('Error: '+error.message,'error');
+  toast('Client added!');closeModal();renderClients();
+}
+async function deleteClient(id){
+  if(!confirm('Delete this client?'))return;
+  await sb.from('clients').delete().eq('id',id);
+  toast('Deleted');renderClients();
+}
+
+async function renderPeople(){
+  setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
+  const {data:people}=await sb.from('people').select('*').order('company_name');
+  setMain(`
+    <div class="page-header">
+      <div><div class="page-title">Contractors</div></div>
+      <button class="btn btn-primary" onclick="showCreatePersonModal()">+ Add Contractor</button>
+    </div>
+    ${(people||[]).length===0?'<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No contractors yet</div></div>':''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+      ${(people||[]).map(p=>`
+        <div class="card">
+          <div style="font-size:15px;font-weight:500">${p.company_name||'—'}</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+            ${p.role?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">🔧 '+p.role+'</div>':''}
+            ${p.phone?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">📞 '+p.phone+'</div>':''}
+            ${p.email?'<div style="font-size:12px;color:var(--text2)">✉ '+p.email+'</div>':''}
+            ${p.location?locBadge(p.location):''}
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="deletePerson('${p.id}')">🗑 Remove</button>
+        </div>`).join('')}
+    </div>
+  `);
+}
+async function showCreatePersonModal(){
+  showModal('Add Contractor',`
+    <div class="form-group"><label>Company Name</label><input id="m-pname" placeholder="e.g. Smith Fiber LLC"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Specialty / Role</label><input id="m-prole" placeholder="e.g. Fiber, Aerial, Civil"></div>
+      <div class="form-group"><label>Phone</label><input id="m-pphone" placeholder="(555) 000-0000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Email</label><input id="m-pemail" type="email" placeholder="optional"></div>
+      <div class="form-group"><label>Location</label>
+        <select id="m-ploc"><option value="">— None —</option>${LOCATIONS.map(l=>'<option value="'+l+'">'+l+'</option>').join('')}</select>
+      </div>
+    </div>
+  `,'<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createPerson()">Add</button>');
+}
+async function createPerson(){
+  const company_name=document.getElementById('m-pname').value.trim(),role=document.getElementById('m-prole').value,phone=document.getElementById('m-pphone').value,email=document.getElementById('m-pemail').value,location=document.getElementById('m-ploc').value;
+  if(!company_name)return toast('Company name required','error');
+  const {error}=await sb.from('people').insert({company_name,role:role||null,phone:phone||null,email:email||null,location:location||null});
+  if(error)return toast('Error: '+error.message,'error');
+  toast('Added!');closeModal();renderPeople();
+}
+async function deletePerson(id){
+  if(!confirm('Remove this contractor?'))return;
+  await sb.from('people').delete().eq('id',id);
+  toast('Removed');renderPeople();
+}
+
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user)onLogin(session.user);
+})();
+</script>
+</body>
+</html>
