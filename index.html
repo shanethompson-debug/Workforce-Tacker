@@ -50,6 +50,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .badge-open{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}
 .badge-in_progress{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.3);}
 .badge-complete{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);}
+.badge-created{background:rgba(148,163,184,.15);color:#94a3b8;border:1px solid rgba(148,163,184,.3);}
+.badge-draft{background:rgba(148,163,184,.15);color:#94a3b8;border:1px solid rgba(148,163,184,.3);}
+.badge-submitted{background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.3);}
+.badge-received{background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3);}
+.badge-closed{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);}
 .badge-br{background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.3);}
 .badge-phx{background:rgba(249,115,22,.1);color:#fb923c;border:1px solid rgba(249,115,22,.3);}
 .btn{padding:9px 18px;font-size:13px;cursor:pointer;font-family:var(--mono);border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
@@ -547,6 +552,7 @@ function showCalDay(day,monthIdx,year){
 async function renderJobs(){
   setMain('<div class="loading"><span class="spinner"></span>Loading jobs...</div>');
   const {data:jobs}=await sb.from('jobs').select('*,clients(name)').order('created_at',{ascending:false});
+  await autoFlipJobStatuses(jobs);
   const all=jobs||[];
   const filtered=all.filter(j=>{
     const sOk=jobFilter==='all'||j.status===jobFilter;
@@ -631,7 +637,7 @@ async function renderJobs(){
     +'</div>'
     +'<div class="filters">'
       +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">STATUS:</span>'
-      +['all','open','in_progress','complete'].map(f=>'<div class="filter-chip '+(jobFilter===f?'active':'')+'" onclick="jobFilter=\''+f+'\';renderJobs()">'+f.replace('_',' ').toUpperCase()+'</div>').join('')
+      +['all','created','in_progress','complete'].map(f=>'<div class="filter-chip '+(jobFilter===f?'active':'')+'" onclick="jobFilter=\''+f+'\';renderJobs()">'+f.replace('_',' ').toUpperCase()+'</div>').join('')
     +'</div>'
     +'<div class="filters">'
       +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">LOCATION:</span>'
@@ -654,7 +660,7 @@ async function showCreateJobModal(){
         <select id="m-jtype"><option value="">— Select Type —</option>${JOB_TYPES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')}</select>
       </div>
       <div class="form-group"><label>Status</label>
-        <select id="m-status"><option value="open">Open</option><option value="in_progress">In Progress</option><option value="complete">Complete</option></select>
+        <select id="m-status"><option value="created">Created</option></select>
       </div>
     </div>
     <div class="form-row">
@@ -725,7 +731,7 @@ async function renderJobDetail(id){
       <div style="display:flex;gap:8px;align-items:center">
         ${statusBadge(job.status)}
         <select onchange="updateJobStatus('${id}',this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:12px;font-family:var(--mono)">
-          <option value="open" ${job.status==='open'?'selected':''}>Open</option>
+          <option value="created" ${job.status==='created'?'selected':''}>Created</option>
           <option value="in_progress" ${job.status==='in_progress'?'selected':''}>In Progress</option>
           <option value="complete" ${job.status==='complete'?'selected':''}>Complete</option>
         </select>
@@ -779,6 +785,15 @@ function switchJobTab(tab){
   document.querySelectorAll('#job-tabs .tab').forEach((el,i)=>el.classList.toggle('active',['materials','tasks','assignments'][i]===tab));
 }
 async function updateJobStatus(id,status){await sb.from('jobs').update({status}).eq('id',id);toast('Status updated');}
+async function autoFlipJobStatuses(jobs){
+  const today=new Date();today.setHours(0,0,0,0);
+  const toFlip=(jobs||[]).filter(j=>j.status==='created'&&j.due_date&&new Date(j.due_date+'T00:00:00')<=today);
+  for(const j of toFlip){
+    await sb.from('jobs').update({status:'in_progress'}).eq('id',j.id);
+    j.status='in_progress';
+  }
+  return jobs;
+}
 async function toggleTask(id,status,jobId){await sb.from('tasks').update({status:status==='complete'?'open':'complete'}).eq('id',id);renderJobDetail(jobId);}
 async function addTask(jobId){
   const title=document.getElementById('new-task').value.trim();if(!title)return;
@@ -869,7 +884,19 @@ async function renderWODetail(id){
           ${wo.jobs&&wo.jobs.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(wo.jobs.due_date)+'</div>':''}
         </div>
       </div>
-      ${wo.jobs&&wo.jobs.status?statusBadge(wo.jobs.status):''}
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        ${wo.jobs&&wo.jobs.status?statusBadge(wo.jobs.status):''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">WO STATUS:</span>
+          ${statusBadge(wo.status||'draft')}
+        </div>
+        <select onchange="updateWOStatus('${id}',this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:12px;font-family:var(--mono)">
+          <option value="draft" ${(wo.status||'draft')==='draft'?'selected':''}>Draft</option>
+          <option value="submitted" ${wo.status==='submitted'?'selected':''}>Submitted</option>
+          <option value="received" ${wo.status==='received'?'selected':''}>Received</option>
+          <option value="closed" ${wo.status==='closed'?'selected':''}>Closed</option>
+        </select>
+      </div>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);padding:20px;margin-bottom:24px">
       <div class="section-title">Financials</div>
@@ -935,6 +962,15 @@ async function addWOContractor(woId){
   if(!person_id)return toast('Select a contractor','error');
   await sb.from('wo_contractors').insert({wo_id:woId,person_id,payment_amount,payout_date:payout_date||null});
   toast('Contractor added');renderWODetail(woId);
+}
+async function updateWOStatus(id,status){
+  // Warn if trying to close with missing data
+  if(status==='closed'){
+    const invoice=parseFloat(document.getElementById('wo-invoice')?.value)||0;
+    if(invoice===0&&!confirm('No invoice amount set. Close anyway?'))return;
+  }
+  await sb.from('work_orders').update({status}).eq('id',id);
+  toast('WO status updated');renderWODetail(id);
 }
 async function removeWOContractor(id,woId){await sb.from('wo_contractors').delete().eq('id',id);renderWODetail(woId);}
 
