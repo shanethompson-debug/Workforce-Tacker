@@ -130,7 +130,7 @@ select option{background:var(--surface2);}
 <body>
 <div id="auth-screen">
   <div class="auth-box">
-    <div class="auth-logo">⚡ WORKFORCE TRACKER</div>
+    <div class="auth-logo">WORKFORCE TRACKER</div>
     <div class="auth-sub">Workforce Tracker</div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
@@ -155,7 +155,7 @@ select option{background:var(--surface2);}
   <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-text">⚡ WORKFORCE TRACKER</div>
+      <div class="logo-text">WORKFORCE TRACKER</div>
       <div class="logo-sub">Workforce Tracker</div>
     </div>
     <div class="sidebar-nav">
@@ -228,7 +228,7 @@ function fmtMoney(n){if(n==null||n==='')return'—';return'$'+Number(n).toLocale
 function statusBadge(s){return`<span class="badge badge-${s}">${(s||'').replace('_',' ').toUpperCase()}</span>`;}
 function locBadge(l){const cls=l&&l.includes('Phoenix')?'badge-phx':'badge-br';return`<span class="badge ${cls}">📍 ${l||'—'}</span>`;}
 function toast(msg,type='success'){const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),3000);}
-function showModal(title,body,footer){document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" ><div class="modal"><div class="modal-header"><div class="modal-title">${title}</div><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div><div class="modal-body">${body}</div><div class="modal-footer">${footer}</div></div></div>`;}
+function showModal(title,body,footer){document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" ><div class="modal"><div class="modal-header"><div class="modal-title">${title}</div><button class="btn btn-ghost btn-sm" onclick="closeModal()">&#215;</button></div><div class="modal-body">${body}</div><div class="modal-footer">${footer}</div></div></div>`;}
 function closeModal(){document.getElementById('modal-container').innerHTML='';}
 
 // Track per-client month offset (0 = current month)
@@ -741,9 +741,9 @@ async function renderJobDetail(id){
     <div id="tab-tasks" style="display:none">
       <div style="margin-bottom:12px">
         ${(tasks||[]).map(t=>`<div class="task-item">
-          <div class="task-check ${t.status==='complete'?'done':''}" onclick="toggleTask('${t.id}','${t.status}','${id}')">${t.status==='complete'?'✓':''}</div>
+          <div class="task-check ${t.status==='complete'?'done':''}" onclick="toggleTask('${t.id}','${t.status}','${id}')">${t.status==='complete'?'&#10003;':''}</div>
           <div class="task-text ${t.status==='complete'?'done':''}">${t.title}${t.people?'<span style="color:var(--text3);font-size:11px;margin-left:8px">→ '+t.people.company_name+'</span>':''}</div>
-          <button class="btn btn-ghost btn-sm" onclick="deleteTask('${t.id}','${id}')">✕</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteTask('${t.id}','${id}')">&#215;</button>
         </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0">No tasks yet</div>'}
       </div>
       <div class="inline-form">
@@ -755,7 +755,7 @@ async function renderJobDetail(id){
     <div id="tab-materials">
       ${(materials||[]).length>0?`<table class="data-table" style="margin-bottom:12px">
         <thead><tr><th>Material</th><th>Quantity</th><th>Unit</th><th></th></tr></thead>
-        <tbody>${materials.map(m=>`<tr><td>${m.name}</td><td style="font-family:var(--mono)">${m.quantity}</td><td style="color:var(--text2)">${m.unit||'—'}</td><td><button class="btn btn-ghost btn-sm" onclick="deleteMaterial('${m.id}','${id}')">✕</button></td></tr>`).join('')}</tbody>
+        <tbody>${materials.map(m=>`<tr><td>${m.name}</td><td style="font-family:var(--mono)">${m.quantity}</td><td style="color:var(--text2)">${m.unit||'—'}</td><td><button class="btn btn-ghost btn-sm" onclick="deleteMaterial('${m.id}','${id}')">&#215;</button></td></tr>`).join('')}</tbody>
       </table>`:'<div style="color:var(--text3);font-size:13px;padding:12px 0">No materials yet</div>'}
       <button class="btn btn-secondary btn-sm" onclick="showAddMaterialModal('${id}')">+ Add Material</button>
     </div>
@@ -763,7 +763,7 @@ async function renderJobDetail(id){
       <div style="margin-bottom:12px">
         ${(assignments||[]).map(a=>`<div class="task-item">
           <div style="flex:1;font-size:13px">${a.people?a.people.company_name:'—'} <span style="color:var(--text3);font-size:11px">(${a.people?a.people.role||'contractor':''})</span></div>
-          <button class="btn btn-ghost btn-sm" onclick="removeAssignment('${a.id}','${id}')">✕</button>
+          <button class="btn btn-ghost btn-sm" onclick="removeAssignment('${a.id}','${id}')">&#215;</button>
         </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0">No contractors assigned</div>'}
       </div>
       <div class="inline-form">
@@ -903,7 +903,7 @@ async function renderWODetail(id){
           <div class="cr-amount">${fmtMoney(c.payment_amount)}</div>
           <div style="font-size:10px;color:var(--text3)">${c.payout_date?'Paid: '+fmtDate(c.payout_date):'No payout date'}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="removeWOContractor('${c.id}','${id}')">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeWOContractor('${c.id}','${id}')">&#215;</button>
       </div>`).join('')||'<div style="color:var(--text3);font-size:13px;padding:12px 0;margin-bottom:12px">No contractors added yet</div>'}
     <div style="margin-top:14px;background:var(--surface2);border:1px solid var(--border);padding:16px">
       <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">ADD CONTRACTOR PAYOUT</div>
@@ -958,7 +958,7 @@ async function renderClients(){
               ${c.phone?'<div class="meta-item"><span>Phone: </span>'+c.phone+'</div>':''}
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="deleteClient('${c.id}')">🗑</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteClient('${c.id}')">Remove</button>
         </div>
       </div>`).join('')}
   `);
@@ -1002,12 +1002,12 @@ async function renderPeople(){
         <div class="card">
           <div style="font-size:15px;font-weight:500">${p.company_name||'—'}</div>
           <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
-            ${p.role?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">🔧 '+p.role+'</div>':''}
-            ${p.phone?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">📞 '+p.phone+'</div>':''}
-            ${p.email?'<div style="font-size:12px;color:var(--text2)">✉ '+p.email+'</div>':''}
+            ${p.role?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">'+'🔧 '+p.role+'</div>':''}
+            ${p.phone?'<div style="font-size:12px;color:var(--text2);font-family:var(--mono)">'+'📞 '+p.phone+'</div>':''}
+            ${p.email?'<div style="font-size:12px;color:var(--text2)">'+'✉ '+p.email+'</div>':''}
             ${p.location?locBadge(p.location):''}
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="deletePerson('${p.id}')">🗑 Remove</button>
+          <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="deletePerson('${p.id}')">Remove</button>
         </div>`).join('')}
     </div>
   `);
