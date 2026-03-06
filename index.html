@@ -129,6 +129,9 @@ select option{background:var(--surface2);}
 .mobile-menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);padding:8px 10px;cursor:pointer;font-size:18px;}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}
 .sidebar-overlay.open{display:block;}
+.client-tab{padding:10px 20px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:var(--mono);white-space:nowrap;flex-shrink:0;}
+.client-tab:hover{color:var(--text);background:var(--surface2);}
+.client-tab-active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(240,165,0,.04);}
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);}
 </style>
 </head>
@@ -189,6 +192,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const JOB_TYPES=['Mod Upgrade','DNX Upgrade','General Construction'];
 const LOCATIONS=['Baton Rouge, LA','Phoenix, AZ'];
 let currentUser=null,jobFilter='all',jobLocFilter='all';
+let activeJobClient='all',activeWOClient='all';
 
 function switchAuthTab(tab){
   document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='signup')));
@@ -551,14 +555,51 @@ function showCalDay(day,monthIdx,year){
 }
 async function renderJobs(){
   setMain('<div class="loading"><span class="spinner"></span>Loading jobs...</div>');
-  const {data:jobs}=await sb.from('jobs').select('*,clients(name)').order('created_at',{ascending:false});
+  const [{data:jobs},{data:clients}]=await Promise.all([
+    sb.from('jobs').select('*,clients(name)').order('created_at',{ascending:false}),
+    sb.from('clients').select('id,name').order('name'),
+  ]);
   await autoFlipJobStatuses(jobs);
   const all=jobs||[];
-  const filtered=all.filter(j=>{
+  const clientList=clients||[];
+
+  if(activeJobClient!=='all'&&!clientList.find(c=>c.id===activeJobClient))activeJobClient='all';
+
+  const tabsHTML='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;flex-shrink:0">'
+    +'<div class="client-tab'+(activeJobClient==='all'?' client-tab-active':'')+'" onclick="activeJobClient=\'all\';renderJobs()">All Clients</div>'
+    +clientList.map(c=>'<div class="client-tab'+(activeJobClient===c.id?' client-tab-active':'')+'" onclick="activeJobClient=\''+c.id+'\';renderJobs()">'+c.name+'</div>').join('')
+  +'</div>';
+
+  const clientFiltered=activeJobClient==='all'?all:all.filter(j=>j.client_id===activeJobClient);
+  const filtered=clientFiltered.filter(j=>{
     const sOk=jobFilter==='all'||j.status===jobFilter;
     const lOk=jobLocFilter==='all'||j.location===jobLocFilter;
     return sOk&&lOk;
   });
+
+  const created=clientFiltered.filter(j=>j.status==='created').length;
+  const inProg=clientFiltered.filter(j=>j.status==='in_progress').length;
+  const complete=clientFiltered.filter(j=>j.status==='complete').length;
+
+  const summaryHTML='<div style="display:flex;gap:12px;margin-bottom:16px">'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:#94a3b8">'+created+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">CREATED</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent)">'+inProg+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">IN PROGRESS</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:#4ade80">'+complete+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">COMPLETE</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text)">'+clientFiltered.length+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">TOTAL</div>'
+    +'</div>'
+  +'</div>';
+
   const jobIds=filtered.map(j=>j.id);
   let matsMap={},tasksMap={},assignMap={};
   if(jobIds.length>0){
@@ -571,6 +612,7 @@ async function renderJobs(){
     (allTasks||[]).forEach(t=>{if(!tasksMap[t.job_id])tasksMap[t.job_id]=[];tasksMap[t.job_id].push(t);});
     (allAssign||[]).forEach(a=>{if(!assignMap[a.job_id])assignMap[a.job_id]=[];assignMap[a.job_id].push(a);});
   }
+
   const cards=filtered.map(job=>{
     const mats=matsMap[job.id]||[];
     const tasks=tasksMap[job.id]||[];
@@ -585,7 +627,7 @@ async function renderJobs(){
           +'</div>'
           +'<div class="card-meta">'
             +(job.location?locBadge(job.location):'')
-            +(job.clients?'<div class="meta-item"><span>Client: </span>'+job.clients.name+'</div>':'')
+            +(activeJobClient==='all'&&job.clients?'<div class="meta-item"><span>Client: </span>'+job.clients.name+'</div>':'')
             +(job.job_type?'<div class="meta-item"><span>Type: </span>'+job.job_type+'</div>':'')
             +(job.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(job.due_date)+'</div>':'')
           +'</div>'
@@ -630,11 +672,14 @@ async function renderJobs(){
     +'</div>';
   }).join('');
 
+  const activeClientName=activeJobClient==='all'?'All Clients':(clientList.find(c=>c.id===activeJobClient)||{name:''}).name;
   setMain(
     '<div class="page-header">'
-      +'<div><div class="page-title">Jobs</div><div class="page-sub">'+filtered.length+' of '+all.length+' jobs</div></div>'
+      +'<div><div class="page-title">Jobs</div><div class="page-sub">'+activeClientName+'</div></div>'
       +'<button class="btn btn-primary" onclick="showCreateJobModal()">+ New Job</button>'
     +'</div>'
+    +tabsHTML
+    +summaryHTML
     +'<div class="filters">'
       +'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">STATUS:</span>'
       +['all','created','in_progress','complete'].map(f=>'<div class="filter-chip '+(jobFilter===f?'active':'')+'" onclick="jobFilter=\''+f+'\';renderJobs()">'+f.replace('_',' ').toUpperCase()+'</div>').join('')
@@ -836,29 +881,80 @@ async function deleteMaterial(id,jobId){await sb.from('materials').delete().eq('
 
 async function renderWorkOrders(){
   setMain('<div class="loading"><span class="spinner"></span>Loading...</div>');
-  const {data:wos}=await sb.from('work_orders').select('*,jobs(title,job_number,location,status,due_date,clients(name))').order('created_at',{ascending:false});
-  setMain(`
-    <div class="page-header"><div><div class="page-title">Work Orders</div><div class="page-sub">Auto-created with each job</div></div></div>
-    ${(wos||[]).length===0?'<div class="empty"><div class="empty-icon">🗂</div><div class="empty-text">No work orders yet — create a job first</div></div>':''}
-    ${(wos||[]).map(w=>`
-      <div class="card" style="cursor:pointer" onclick="navigate('wo-detail','${w.id}')">
-        <div class="card-header">
-          <div style="flex:1">
-            <div class="card-title clickable">WO #${w.wo_number}</div>
-            <div class="card-meta">
-              ${w.jobs&&w.jobs.location?locBadge(w.jobs.location):''}
-              ${w.jobs&&w.jobs.clients?'<div class="meta-item"><span>Client: </span>'+w.jobs.clients.name+'</div>':''}
-              ${w.jobs?'<div class="meta-item"><span>Job: </span>'+(w.jobs.job_number?'#'+w.jobs.job_number+' — ':'')+w.jobs.title+'</div>':''}
-              ${w.client_invoice_amount?'<div class="meta-item money-pos"><span>Invoice: </span>'+fmtMoney(w.client_invoice_amount)+'</div>':''}
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            ${w.jobs&&w.jobs.status?statusBadge(w.jobs.status):''}
-            <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">Open →</span>
-          </div>
-        </div>
-      </div>`).join('')}
-  `);
+  const [{data:wos},{data:clients}]=await Promise.all([
+    sb.from('work_orders').select('*,jobs(title,job_number,location,status,due_date,client_id,clients(name))').order('created_at',{ascending:false}),
+    sb.from('clients').select('id,name').order('name'),
+  ]);
+  const allWOs=wos||[];
+  const clientList=clients||[];
+
+  if(activeWOClient!=='all'&&!clientList.find(c=>c.id===activeWOClient))activeWOClient='all';
+
+  const tabsHTML='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;flex-shrink:0">'
+    +'<div class="client-tab'+(activeWOClient==='all'?' client-tab-active':'')+'" onclick="activeWOClient=\'all\';renderWorkOrders()">All Clients</div>'
+    +clientList.map(c=>'<div class="client-tab'+(activeWOClient===c.id?' client-tab-active':'')+'" onclick="activeWOClient=\''+c.id+'\';renderWorkOrders()">'+c.name+'</div>').join('')
+  +'</div>';
+
+  const clientFiltered=activeWOClient==='all'?allWOs:allWOs.filter(w=>w.jobs&&w.jobs.client_id===activeWOClient);
+
+  // WO status summary counts
+  const draft=clientFiltered.filter(w=>(w.status||'draft')==='draft').length;
+  const submitted=clientFiltered.filter(w=>w.status==='submitted').length;
+  const received=clientFiltered.filter(w=>w.status==='received').length;
+  const closed=clientFiltered.filter(w=>w.status==='closed').length;
+
+  const summaryHTML='<div style="display:flex;gap:12px;margin-bottom:16px">'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:#94a3b8">'+draft+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">DRAFT</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent)">'+submitted+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">SUBMITTED</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:#60a5fa">'+received+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">RECEIVED</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:#4ade80">'+closed+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">CLOSED</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1;text-align:center">'
+      +'<div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text)">'+clientFiltered.length+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">TOTAL</div>'
+    +'</div>'
+  +'</div>';
+
+  const cards=clientFiltered.map(w=>
+    '<div class="card" style="cursor:pointer" onclick="navigate(\'wo-detail\',\''+w.id+'\')"> '
+      +'<div class="card-header">'
+        +'<div style="flex:1">'
+          +'<div class="card-title clickable">WO #'+w.wo_number+'</div>'
+          +'<div class="card-meta">'
+            +(w.jobs&&w.jobs.location?locBadge(w.jobs.location):'')
+            +(activeWOClient==='all'&&w.jobs&&w.jobs.clients?'<div class="meta-item"><span>Client: </span>'+w.jobs.clients.name+'</div>':'')
+            +(w.jobs?'<div class="meta-item"><span>Job: </span>'+(w.jobs.job_number?'#'+w.jobs.job_number+' — ':'')+w.jobs.title+'</div>':'')
+            +(w.client_invoice_amount?'<div class="meta-item money-pos"><span>Invoice: </span>'+fmtMoney(w.client_invoice_amount)+'</div>':'')
+            +(w.jobs&&w.jobs.due_date?'<div class="meta-item"><span>Due: </span>'+fmtDate(w.jobs.due_date)+'</div>':'')
+          +'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">'
+          +(w.jobs&&w.jobs.status?statusBadge(w.jobs.status):'')
+          +statusBadge(w.status||'draft')
+          +'<span style="font-size:12px;color:var(--text3);font-family:var(--mono)">Open →</span>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+  ).join('');
+
+  const activeClientName=activeWOClient==='all'?'All Clients':(clientList.find(c=>c.id===activeWOClient)||{name:''}).name;
+  setMain(
+    '<div class="page-header"><div><div class="page-title">Work Orders</div><div class="page-sub">'+activeClientName+'</div></div></div>'
+    +tabsHTML
+    +summaryHTML
+    +(clientFiltered.length===0?'<div class="empty"><div class="empty-icon">🗂</div><div class="empty-text">No work orders found</div></div>':cards)
+  );
 }
 
 async function renderWODetail(id){
