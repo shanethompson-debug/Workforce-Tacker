@@ -886,12 +886,12 @@ async function renderWODetail(id){
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         ${wo.jobs&&wo.jobs.status?statusBadge(wo.jobs.status):''}
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
           <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">WO STATUS:</span>
           ${statusBadge(wo.status||'draft')}
         </div>
-        <select onchange="updateWOStatus('${id}',this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:12px;font-family:var(--mono)">
-          <option value="draft" ${(wo.status||'draft')==='draft'?'selected':''}>Draft</option>
+        <select id="wo-status-select" onchange="updateWOStatus('${id}',this.value)" style="background:var(--surface2);border:1px solid var(--accent);color:var(--text);padding:8px 12px;font-size:13px;font-family:var(--mono);margin-top:4px;width:160px">
+          <option value="draft" ${wo.status==='draft'||!wo.status?'selected':''}>Draft</option>
           <option value="submitted" ${wo.status==='submitted'?'selected':''}>Submitted</option>
           <option value="received" ${wo.status==='received'?'selected':''}>Received</option>
           <option value="closed" ${wo.status==='closed'?'selected':''}>Closed</option>
