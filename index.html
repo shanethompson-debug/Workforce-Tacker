@@ -129,7 +129,7 @@ select option{background:var(--surface2);}
 .mobile-menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);padding:8px 10px;cursor:pointer;font-size:18px;}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}
 .sidebar-overlay.open{display:block;}
-.client-tab{padding:10px 20px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:var(--mono);white-space:nowrap;flex-shrink:0;}
+.client-tab{padding:10px 20px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:var(--mono);}
 .client-tab:hover{color:var(--text);background:var(--surface2);}
 .client-tab-active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(240,165,0,.04);}
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);}
@@ -565,7 +565,7 @@ async function renderJobs(){
 
   if(activeJobClient!=='all'&&!clientList.find(c=>c.id===activeJobClient))activeJobClient='all';
 
-  const tabsHTML='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;flex-shrink:0">'
+  const tabsHTML='<div style="display:flex;flex-wrap:wrap;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">'
     +'<div class="client-tab'+(activeJobClient==='all'?' client-tab-active':'')+'" onclick="activeJobClient=\'all\';renderJobs()">All Clients</div>'
     +clientList.map(c=>'<div class="client-tab'+(activeJobClient===c.id?' client-tab-active':'')+'" onclick="activeJobClient=\''+c.id+'\';renderJobs()">'+c.name+'</div>').join('')
   +'</div>';
@@ -876,7 +876,7 @@ async function renderWorkOrders(){
 
   if(activeWOClient!=='all'&&!clientList.find(c=>c.id===activeWOClient))activeWOClient='all';
 
-  const tabsHTML='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;flex-shrink:0">'
+  const tabsHTML='<div style="display:flex;flex-wrap:wrap;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">'
     +'<div class="client-tab'+(activeWOClient==='all'?' client-tab-active':'')+'" onclick="activeWOClient=\'all\';renderWorkOrders()">All Clients</div>'
     +clientList.map(c=>'<div class="client-tab'+(activeWOClient===c.id?' client-tab-active':'')+'" onclick="activeWOClient=\''+c.id+'\';renderWorkOrders()">'+c.name+'</div>').join('')
   +'</div>';
